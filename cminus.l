@@ -6,6 +6,9 @@
 #include "globals.h"
 #include "util.h"
 #include "scan.h"
+#include <string.h>
+#include <stdlib.h>
+
 /* lexeme of identifier or reserved word */
 char tokenString[MAXTOKENLEN+1];
 %}
@@ -25,18 +28,13 @@ whitespace  [ \t]+
 "return"        {return RETURN;}
 "int"           {return INT;}
 "void"          {return VOID;}
-"then"          {return THEN;}
-"end"           {return END;}
-"repeat"        {return REPEAT;}
-"until"         {return UNTIL;}
-"read"          {return READ;}
-"write"         {return WRITE;}
 "="             {return ASSIGN;}
 "=="            {return EQ;}
 "<"             {return LT;}
 ">"             {return GT;}
 "<="            {return LE;}
 ">="            {return GE;}
+"!="            {return NE;}
 "+"             {return PLUS;}
 "-"             {return MINUS;}
 "*"             {return TIMES;}
@@ -65,21 +63,70 @@ whitespace  [ \t]+
 
 %%
 
+StackNode *top = NULL;
+
 TokenType getToken(void)
-{ static int firstTime = TRUE;
-  TokenType currentToken;
-  if (firstTime)
-  { firstTime = FALSE;
-    lineno++;
-    yyin = source;
-    yyout = listing;
-  }
-  currentToken = yylex();
-  strncpy(tokenString,yytext,MAXTOKENLEN);
-  if (TraceScan) {
-    fprintf(listing,"\t%d: ",lineno);
-    printToken(currentToken,tokenString);
-  }
-  return currentToken;
+{
+	static int firstTime = TRUE;
+
+  	TokenType currentToken;
+
+  	if (firstTime)
+  	{
+		firstTime = FALSE;
+		lineno++;
+		yyin = source;
+		yyout = listing;
+  	}
+
+  	currentToken = yylex();
+  	strncpy(tokenString,yytext,MAXTOKENLEN);
+
+  	if (TraceScan)
+	{
+		fprintf(listing,"\t%d: ",lineno);
+		printToken(currentToken,tokenString);
+  	}
+
+	if (currentToken == ID || currentToken == NUM)
+	{
+		top = PushStack(top, tokenString);
+	}
+
+  	return currentToken;
 }
 
+/**
+ * push a token string to stack.
+ */
+StackNode *PushStack(StackNode *top, char *tokenString)
+{
+	StackNode *newNode;
+
+	newNode = (StackNode *)malloc(sizeof(StackNode));
+	strncpy(newNode->token, tokenString, MAXTOKENLEN + 1);
+	newNode->next = top;
+
+	return newNode;
+}
+
+/**
+ * pop a token string from stack.
+ * this element should be freed after use.
+ */
+StackNode *PopStack(StackNode **top)
+{
+	StackNode *retNode;
+
+	/* error handling */
+	if (*top == NULL)
+	{
+		printf("error occured : pop from empty stack\n");
+		return NULL;
+	}
+
+	retNode = *top;			/* pop current top node from stack */
+	*top = retNode->next;	/* set current top node to the next node */
+
+	return retNode;
+}

@@ -13,6 +13,11 @@
  */
 void printToken( TokenType, const char* );
 
+/* Function newDeclareNode creates a new declaration
+ * node for syntax tree construction
+ */
+TreeNode * newDeclareNode(StmtKind);
+
 /* Function newStmtNode creates a new statement
  * node for syntax tree construction
  */

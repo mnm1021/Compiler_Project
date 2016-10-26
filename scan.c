@@ -8,6 +8,8 @@
 #include "globals.h"
 #include "util.h"
 #include "scan.h"
+#include "parse.h"
+#include <string.h>
 
 /* states in scanner DFA */
 typedef enum
@@ -21,6 +23,7 @@ typedef enum
 
 /* lexeme of identifier or reserved word */
 char tokenString[MAXTOKENLEN+1];
+char latestTokenString[MAXTOKENLEN+1];
 
 /* BUFLEN = length of the input buffer for
    source code lines */
@@ -69,8 +72,8 @@ static struct
 	   {"if",IF}, {"else",ELSE}, {"while",WHILE}, {"return",RETURN},
 	   {"int",INT}, {"void",VOID},
       /* discarded */
-	   {"then",THEN}, {"end",END}, {"repeat",REPEAT}, {"until",UNTIL},
-	   {"read",READ}, {"write",WRITE}
+/*	   {"then",THEN}, {"end",END}, {"repeat",REPEAT}, {"until",UNTIL},
+	   {"read",READ}, {"write",WRITE} */
    };
 
 /* lookup an identifier to see if it is a reserved word */
@@ -318,6 +321,11 @@ TokenType getToken(void)
    		fprintf(listing,"\t%d: ",lineno);
    		printToken(currentToken,tokenString);
  	}
+
+	if (currentToken == ID || currentToken == NUM)
+	{
+		strncpy(latestTokenString, tokenString, MAXTOKENLEN + 1);
+	}
 
  	return currentToken;
 } /* end getToken */

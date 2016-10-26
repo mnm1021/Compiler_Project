@@ -19,4 +19,26 @@ extern char tokenString[MAXTOKENLEN+1];
  */
 TokenType getToken(void);
 
+/**
+ * declaration of string stack.
+ */
+typedef struct StackNode
+{
+	char token[MAXTOKENLEN + 1];
+	struct StackNode *next;
+} StackNode;
+
+/**
+ * push a token string to stack.
+ */
+StackNode *PushStack(StackNode *top, char *tokenString);
+
+/**
+ * pop a token string from stack.
+ * this element should be freed after use.
+ */
+StackNode *PopStack(StackNode **top);
+
+extern StackNode *top;
+
 #endif
