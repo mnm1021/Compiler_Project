@@ -102,11 +102,11 @@ var_declaration		: type_specifier ID SEMI
 
 type_specifier		: INT
 						{
-							$$ = INT;
+							$$ = (YYSTYPE)INT;
 						}
 					| VOID
 						{
-							$$ = VOID;
+							$$ = (YYSTYPE)VOID;
 						}
 					;
 
@@ -345,7 +345,7 @@ simple_expression	: add_expression relop add_expression
 						{
 							$$ = newExpNode(OpExp);
 
-							$$->attr.op = $2;
+							$$->attr.op = (long)$2;
 							$$->child[0] = $1;
 							$$->child[1] = $3;
 						}
@@ -355,19 +355,19 @@ simple_expression	: add_expression relop add_expression
 						}
 					;
 
-relop				: GE {$$ = GE;}
-					| GT {$$ = GT;}
-					| LE {$$ = LE;}
-					| LT {$$ = LT;}
-					| EQ {$$ = EQ;}
-					| NE {$$ = NE;}
+relop				: GE {$$ = (YYSTYPE)GE;}
+					| GT {$$ = (YYSTYPE)GT;}
+					| LE {$$ = (YYSTYPE)LE;}
+					| LT {$$ = (YYSTYPE)LT;}
+					| EQ {$$ = (YYSTYPE)EQ;}
+					| NE {$$ = (YYSTYPE)NE;}
 					;
 
 add_expression		: add_expression addop term
 						{
 							$$ = newExpNode(OpExp);
 
-							$$->attr.op = $2;
+							$$->attr.op = (long)$2;
 							$$->child[0] = $1;
 							$$->child[1] = $3;
 						}
@@ -377,15 +377,15 @@ add_expression		: add_expression addop term
 						}
 					;
 
-addop				: PLUS {$$ = PLUS;}
-					| MINUS {$$ = MINUS;}
+addop				: PLUS {$$ = (YYSTYPE)PLUS;}
+					| MINUS {$$ = (YYSTYPE)MINUS;}
 					;
 
 term				: term mulop factor
 						{
 							$$ = newExpNode(OpExp);
 
-							$$->attr.op = $2;
+							$$->attr.op = (long)$2;
 							$$->child[0] = $1;
 							$$->child[1] = $3;
 						}
@@ -395,8 +395,8 @@ term				: term mulop factor
 						}
 					;
 
-mulop				: TIMES {$$ = TIMES;}
-					| OVER {$$ = OVER;}
+mulop				: TIMES {$$ = (YYSTYPE)TIMES;}
+					| OVER {$$ = (YYSTYPE)OVER;}
 					;
 
 factor				: LPAREN expression RPAREN

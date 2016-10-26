@@ -6,7 +6,7 @@
 
 CC = gcc
 
-CFLAGS = 
+CFLAGS =
 
 OBJS = main.o util.o scan.o symtab.o #analyze.o parse.o code.o cgen.o
 
@@ -53,7 +53,7 @@ lex.yy.o: cminus.l scan.h util.h globals.h
 
 
 #by yacc, flex
-OBJS_YACC = main.o util.o lex.yy.o y.tab.o
+OBJS_YACC = y.tab.o main.o util.o lex.yy.o
 
 cminus_yacc: $(OBJS_YACC)
 	$(CC) $(CFLAGS) $(OBJS_YACC) -o cminus_yacc -lfl

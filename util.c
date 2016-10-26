@@ -10,6 +10,8 @@
 #include "util.h"
 #include "y.tab.h"
 
+void PrintOperator(TokenType op);
+
 /* Procedure printToken prints a token 
  * and its lexeme to the listing file
  */
