@@ -62,7 +62,7 @@ extern int lineno; /* source line number for listing */
 /***********   Syntax tree for parsing ************/
 /**************************************************/
 
-typedef enum {StmtK, ExpK, DeclareK} NodeKind;
+typedef enum {StmtK, ExpK, DeclareK, EmptyK} NodeKind;
 
 typedef enum {IdDec, SizeDec, ParamDec} DeclareKind;
 typedef enum {CompoundStmt, SelectionStmt, IterationStmt, ReturnStmt} StmtKind;

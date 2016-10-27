@@ -28,6 +28,11 @@ TreeNode * newStmtNode(StmtKind);
  */
 TreeNode * newExpNode(ExpKind);
 
+/*
+ * create empty node.
+ */
+TreeNode * newEmptyNode();
+
 /* Function copyString allocates and makes a new
  * copy of an existing string
  */

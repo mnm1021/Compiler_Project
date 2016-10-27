@@ -70,6 +70,27 @@ void printToken( TokenType token, const char* tokenString )
   }
 }
 
+/*
+ * create empty node.
+ */
+TreeNode * newEmptyNode()
+{ 
+	TreeNode * t = (TreeNode *) malloc(sizeof(TreeNode));
+	int i;
+  
+	if (t==NULL)
+		fprintf(listing,"Out of memory error at line %d\n",lineno);
+  	else {
+	 	for (i = 0; i < MAXCHILDREN; i++)
+			t->child[i] = NULL;
+
+		t->sibling = NULL;
+	 	t->nodekind = EmptyK;
+	  	t->lineno = lineno;
+  	}
+  	return t;
+}
+
 /* Function newDeclareNode creates a new declaration
  * node for syntax tree construction
  */
@@ -165,20 +186,33 @@ static void printSpaces(void)
  */
 void printTree(TreeNode * tree)
 { 
+	static int isNewlined = FALSE;
 	int i;
 
   	INDENT;
 
   	while (tree != NULL)
 	{
+		isNewlined = FALSE;
 		printSpaces();
 
 		if (tree->nodekind == DeclareK)
 		{
+			/* print declaration node. */
 			switch (tree->kind.declaration)
 			{
 				case IdDec:
-					fprintf(listing,"Declaration_Id : %s\n", tree->attr.name);
+					if (tree->child[1] != NULL
+							&& tree->child[1]->nodekind == StmtK)
+					{
+						fprintf(listing,"Function ");
+					}
+					else
+					{
+						fprintf(listing, "Variable ");
+					}
+
+					fprintf(listing,"Declaration - ID : %s\n", tree->attr.name);
 					break;
 
 				case SizeDec:
@@ -196,22 +230,23 @@ void printTree(TreeNode * tree)
 		}
 		else if (tree->nodekind == StmtK)
 	  	{ 
+			/* print statement node. */
 			switch (tree->kind.stmt)
 			{
 				case CompoundStmt:
-					fprintf(listing,"Compound\n");
+					fprintf(listing,"Compound Statements\n");
 				 	break;
 
 				case SelectionStmt:
-			 		fprintf(listing,"Selection\n");
+			 		fprintf(listing,"Selection(If) Statement\n");
 		  			break;
 
 				case IterationStmt:
-		  			fprintf(listing,"Iteration");
+		  			fprintf(listing,"Iteration(While) Statement\n");
 		  			break;
 
 				case ReturnStmt:
-		  			fprintf(listing,"Return\n");
+		  			fprintf(listing,"Return Statement\n");
 		  			break;
 
 				default:
@@ -221,6 +256,7 @@ void printTree(TreeNode * tree)
 		}
 		else if (tree->nodekind == ExpK)
 		{ 
+			/* print expression node. */
 			switch (tree->kind.exp)
 			{
 				case OpExp:
@@ -233,7 +269,7 @@ void printTree(TreeNode * tree)
 		   			break;
 
 				case IdExp:
-		  			fprintf(listing,"Expression_Id : %s\n", tree->attr.name);
+		  			fprintf(listing,"Expression - ID : %s\n", tree->attr.name);
 		  			break;
 
 				default:
@@ -241,11 +277,45 @@ void printTree(TreeNode * tree)
 		  			break;
 			}
 		}
+		else if (tree->nodekind == EmptyK)
+		{
+			fprintf(listing,"Empty Node\n");
+		}
 		else 
+		{
 			fprintf(listing,"Unknown node kind\n");
+		}
 
+		/* print child nodes. */
 		for (i = 0; i < MAXCHILDREN; i++)
+		{
+			/*
+			 * only one new-line character is allowed at once.
+			 * if there is no child anymore, set new line.
+			 */
+			if (tree->child[i] == NULL && isNewlined == FALSE)
+			{
+				isNewlined = TRUE;
+				fprintf(listing,"\n");
+			}
+
+			if (tree->child[i] != NULL)
+			{
+				/* set new line character when new child comes. */
+				if (isNewlined == FALSE)
+				{
+					isNewlined = TRUE;
+					fprintf(listing,"\n");
+				}
+
+				INDENT;
+				printSpaces();
+				fprintf(listing,"[%dth child]\n",i);
+				UNINDENT;
+			}
+
 			printTree(tree->child[i]);
+		}
 
 		tree = tree->sibling;
   	}

@@ -79,14 +79,14 @@ var_declaration		: type_specifier ID SEMI
 						}
 					| type_specifier ID LBRACE NUM RBRACE SEMI
 					  	{
-							/* get string from stack. */
+							/* get size from stack. */
 							StackNode *tokenNode = PopStack(&top);
-							savedName = copyString(tokenNode->token);
+							savedNum = atoi(tokenNode->token);
 							free(tokenNode);
 
-							/* get size from stack. */
+							/* get string from stack. */
 							tokenNode = PopStack(&top);
-							savedNum = atoi(tokenNode->token);
+							savedName = copyString(tokenNode->token);
 							free(tokenNode);
 
 							/* create new node. */
@@ -125,6 +125,9 @@ func_declaration	: type_specifier ID LPAREN params RPAREN compound_stmt
 
 							$$->child[0] = $4;
 							$$->child[1] = $6;
+
+							if ($$->child[0] == NULL)
+								$$->child[0] = newEmptyNode();
 						}
 					;
 
@@ -188,6 +191,11 @@ compound_stmt		: LCURLY local_declarations statement_list RCURLY
 
 							$$->child[0] = $2;
 							$$->child[1] = $3;
+
+							if ($$->child[0] == NULL)
+							{
+								$$->child[0] = newEmptyNode();
+							}
 						}
 					;
 
