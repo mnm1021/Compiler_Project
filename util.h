@@ -31,7 +31,7 @@ TreeNode * newExpNode(ExpKind);
 /*
  * create empty node.
  */
-TreeNode * newEmptyNode();
+TreeNode * newEmptyNode(void);
 
 /* Function copyString allocates and makes a new
  * copy of an existing string
