@@ -19,6 +19,9 @@ struct SymbolTable *currentTable;
 /* variable for not duplicating child. */
 int isNewFunctionDeclared = 0;
 
+/* set traversing order. */
+int order = 0;
+
 /******************
  * error handlers *
  ******************/
@@ -159,6 +162,7 @@ static int paramCheck(BucketList lookupResult, TreeNode *t)
             return 0;
         }
 
+        /* type mismatch */
         if (lookupResult->type != t->type)
         {
             return 0;
@@ -207,6 +211,8 @@ static void insertNode( TreeNode * t)
                 newTable->sibling = NULL;
                 newTable->parent = currentTable;
                 newTable->visited = 0;
+                newTable->order = order;
+                order++;
 
                 /* add to currentTable's child. */
                 struct SymbolTable *childTable = currentTable->child;
@@ -231,7 +237,7 @@ static void insertNode( TreeNode * t)
             else
             {
                 isFunction = 0;
-                if (t->type == Void)
+                if (t->type == Void || t->type == VoidArray)
                 {
                     voidVariableError(t);
                 }
@@ -301,24 +307,13 @@ static void insertNode( TreeNode * t)
                 }
                 else
                 {
-                    if (strcmp(t->attr.name, "input") == 0)
+                    if (t->type == Func)
                     {
-                        t->type = Integer;
-                    }
-                    else if (strcmp(t->attr.name, "output") == 0)
-                    {
-                        t->type = Void;
+                        undeclaredFunctionError(t, t->attr.name);
                     }
                     else
                     {
-                        if (t->type == Func)
-                        {
-                            undeclaredFunctionError(t, t->attr.name);
-                        }
-                        else
-                        {
-                            undeclaredVariableError(t, t->attr.name);
-                        }
+                        undeclaredVariableError(t, t->attr.name);
                     }
                 }
                 break;
@@ -355,6 +350,8 @@ static void insertNode( TreeNode * t)
                 newTable->sibling = NULL;
                 newTable->parent = currentTable;
                 newTable->visited = 0;
+                newTable->order = order;
+                order++;
 
                 /* add to currentTable's child. */
                 struct SymbolTable *childTable = currentTable->child;
@@ -393,8 +390,37 @@ void buildSymtab(TreeNode * syntaxTree)
     globalTable->sibling = NULL;
     globalTable->parent = NULL;
     globalTable->visited = 1;
+    globalTable->order = order;
+    order++;
 
     currentTable = globalTable;
+
+    /******************************************/
+    /* add builtin functions. */
+    /******************************************/
+    TreeNode *inputNode = (TreeNode *)malloc(sizeof(TreeNode));
+
+    inputNode->attr.name = "input";
+    inputNode->lineno = 0;
+    inputNode->type = Integer;
+
+    st_insert(globalTable->hashTable, inputNode, 1);
+
+    TreeNode *outputNode = (TreeNode *)malloc(sizeof(TreeNode));
+
+    outputNode->attr.name = "output";
+    outputNode->lineno = 0;
+    outputNode->type = Void;
+
+    st_insert(globalTable->hashTable, outputNode, 1);
+
+    /* add param to output. */
+    BucketList outputHash = st_lookup(globalTable, "output");
+    outputHash->param = (BucketList)malloc(sizeof(*outputHash));
+    outputHash->param->type = Integer;
+    outputHash->param->name = "arg";
+
+    /*******************************************/
 
     /* traverse through syntax tree, build symbol table. */
     traverse(syntaxTree, insertNode, backtrackProc);
@@ -412,7 +438,7 @@ void buildSymtab(TreeNode * syntaxTree)
  */
 static void checkNode(TreeNode * t)
 {
-    Type returnType, functionType;
+    Type returnType;
     BucketList lookupResult;
 
     switch (t->nodekind)
@@ -430,13 +456,14 @@ static void checkNode(TreeNode * t)
                         returnType = t->child[0]->type;
                     }
 
-                    functionType = st_lookup( globalTable,
-                                              currentTable->functionName )->type;
-
-                    if (returnType != functionType)
+                    lookupResult = st_lookup( globalTable,
+                                              currentTable->functionName );
+                    if (lookupResult == NULL
+                            || returnType != lookupResult->type)
                     {
                         returnTypeError( t );
                     }
+
                     break;
                 
                 case CompoundStmt:
@@ -468,37 +495,17 @@ static void checkNode(TreeNode * t)
             }
             else if (t->kind.exp == IdExp)
             {
-                /* handle input, output buildin functions */
-                if (strcmp(t->attr.name, "input") == 0)
-                {
-                    /* input has no parameters */
-                    if (t->child[0] != NULL)
-                    {
-                        invalidFunctionError(t);
-                    }
-                }
-                else if (strcmp(t->attr.name, "output") == 0)
-                {
-                    /* output has only one integer parameter */
-                    if (t->child[0] != NULL
-                            && t->child[0]->type == Integer
-                            && t->child[0]->sibling == NULL)
-                    {
-                        /* pass */
-                    }
-                    else
-                    {
-                        invalidFunctionError(t);
-                    }
-                }
-                else
-                {
-                    lookupResult = st_lookup(currentTable, t->attr.name);
+                lookupResult = st_lookup(currentTable, t->attr.name);
                     
-                    /* check parameters if function */
+                /* check parameters if function */
+                if (lookupResult != NULL)
+                {
                     if (lookupResult->is_function)
                     {
-                        paramCheck(lookupResult, t);
+                        if (paramCheck(lookupResult, t) == 0)
+                        {
+                            invalidFunctionError( t );
+                        }
                     }
                 }
             }

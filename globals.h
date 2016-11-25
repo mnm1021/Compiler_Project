@@ -68,7 +68,7 @@ typedef enum {IdDec, SizeDec, ParamDec} DeclareKind;
 typedef enum {CompoundStmt, SelectionStmt, IterationStmt, ReturnStmt} StmtKind;
 typedef enum {OpExp, ConstExp, IdExp} ExpKind;
 
-typedef enum {Void, Integer, IntegerArray, Func} Type;
+typedef enum {Void, Integer, IntegerArray, Func, VoidArray} Type;
 
 #define MAXCHILDREN 3
 

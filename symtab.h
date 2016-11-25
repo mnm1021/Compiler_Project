@@ -59,8 +59,11 @@ struct SymbolTable
     /* parent represents the parent scope of this block. */
     struct SymbolTable *parent;
 
-    /* */
+    /* represents that this symbol table is already visited when traversing. */
     int visited;
+
+    /* table traversing order. */
+    int order;
 };
 
 /* represents global scope. */

@@ -105,6 +105,9 @@ BucketList table_lookup ( BucketList *hashTable, char * name )
     return l; /* l can be NULL if there is no variable found. */
 }
 
+/**
+ * print given type into string.
+ */
 static void printType(Type type)
 {
     if (type == Integer)
@@ -120,6 +123,92 @@ static void printType(Type type)
         printf("IntegerArray\n");
     }
 }
+
+/**
+ * find table that has the given order.
+ */
+static struct SymbolTable *findNewTableInOrder(
+        struct SymbolTable *currentTable,
+        int order)
+{
+    struct SymbolTable *childTable, *resultTable;
+
+    if (currentTable != NULL)
+    {
+        if (currentTable->order == order)
+        {
+            return currentTable;
+        }
+
+        /* search through children. */
+        childTable = currentTable->child;
+        while (childTable != NULL)
+        {
+            resultTable = findNewTableInOrder(childTable, order);
+            if (resultTable != NULL)
+            {
+                return resultTable;
+            }
+
+            childTable = childTable->child;
+        }
+
+        /* search through siblings. */
+        return findNewTableInOrder(currentTable->sibling, order);
+    }
+    
+    return NULL;
+}
+
+/**
+ * print function scope recursively.
+ */
+static void printFunctionScope(struct SymbolTable *currentTable,
+                               struct SymbolTable *baseTable)
+{
+    BucketList bucket;
+    int i;
+
+    if (currentTable != NULL)
+    {
+        /* print header of table. */
+        printf("function name : %s (nested level : %d)\n",
+                currentTable->functionName,
+                currentTable->depth);
+        printf("   ID NAME        ID TYPE        DATA TYPE\n");
+        printf("-------------  -------------   --------------\n");
+
+        for (i = 0; i < SIZE; i++)
+        {
+            bucket = currentTable->hashTable[i];
+
+            while (bucket != NULL)
+            {
+                printf("%-15s", bucket->name);
+
+                if (bucket->is_function)
+                {
+                    printf("%-16s", "Function");
+                }
+                else
+                {
+                    printf("%-16s", "Variable");
+                }
+
+                printType(bucket->type);
+
+                bucket = bucket->next;
+            }
+        }
+        printf("\n");
+
+        /* find new scope's table in order. */
+        printFunctionScope(findNewTableInOrder(baseTable->child,
+                                               currentTable->order + 1),
+                           baseTable);
+    }
+}
+
 
 /* Procedure printSymTab prints a formatted 
  * listing of the symbol table contents 
@@ -146,7 +235,7 @@ void printSymTab(FILE * listing)
                 /* print each function */
                 printf("Function Name     Data Type\n");
                 printf("-------------   -------------\n");
-                printf("%-17s", bucket->name);
+                printf("%-16s", bucket->name);
                 printType(bucket->type);
 
                 /* print every params */
@@ -156,13 +245,13 @@ void printSymTab(FILE * listing)
                 paramBucket = bucket->param;
                 if (paramBucket == NULL)
                 {
-                    printf("%-23s%s\n", "Void", "Void");
+                    printf("%-22s%s\n", "Void", "Void");
                 }
                 else
                 {
                     while (paramBucket != NULL)
                     {
-                        printf("%-23s",paramBucket->name);
+                        printf("%-22s",paramBucket->name);
                         printType(paramBucket->type);
                         paramBucket = paramBucket->param;
                     }
@@ -175,37 +264,43 @@ void printSymTab(FILE * listing)
         }
     }
 
-    /* */
+    /* print functions and global variables */
+    printf("<FUNCTION AND GLOBAL VARIABLES>\n");
+    printf("   ID NAME        ID TYPE        DATA TYPE\n");
+    printf("-------------  -------------   --------------\n");
+    
+    for (i = 0; i < SIZE; i++)
+    {
+        bucket = currentTable->hashTable[i];
+
+        while (bucket != NULL)
+        {
+            printf("%-15s", bucket->name);
+
+            if (bucket->is_function)
+            {
+                printf("%-16s", "Function");
+            }
+            else
+            {
+                printf("%-16s", "Variable");
+            }
+
+            printType(bucket->type);
+
+            bucket = bucket->next;
+        }
+    }
+
+    /* print each function's parameter and local variables. */
+    printf("\n<FUNCTION PARAMETERS AND LOCAL VARIABLES>\n");
+    
+    currentTable = globalTable->child;
+    while (currentTable != NULL)
+    {
+        printFunctionScope(currentTable, currentTable);
+
+        currentTable = currentTable->sibling;
+    }
 
 } /* printSymTab */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

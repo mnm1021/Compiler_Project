@@ -98,6 +98,10 @@ var_declaration		: type_specifier ID SEMI
                             {
                                 $$->type = IntegerArray;
                             }
+                            else
+                            {
+                                $$->type = VoidArray;
+                            }
 							free(savedName);
 
 							$$->child[0] = newDeclareNode(SizeDec);
