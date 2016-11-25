@@ -87,6 +87,6 @@ BucketList table_lookup ( BucketList *hashTable, char * name );
  * listing of the symbol table contents 
  * to the listing file
  */
-//void printSymTab(FILE * listing);
+void printSymTab(FILE * listing);
 
 #endif
