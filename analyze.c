@@ -492,6 +492,14 @@ static void checkNode(TreeNode * t)
                        t->type = t->child[0]->type;
                     }
                 }
+                else if (t->attr.op != EQ && t->attr.op != NE)
+                {
+                    if (t->child[0]->type != Integer
+                            || t->child[1]->type != Integer)
+                    {
+                        typeError( t );
+                    }
+                }
             }
             else if (t->kind.exp == IdExp)
             {
