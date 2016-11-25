@@ -62,26 +62,39 @@ extern int lineno; /* source line number for listing */
 /***********   Syntax tree for parsing ************/
 /**************************************************/
 
-typedef enum {StmtK,ExpK} NodeKind;
-typedef enum {IfK,RepeatK,AssignK,ReadK,WriteK} StmtKind;
-typedef enum {OpK,ConstK,IdK} ExpKind;
+typedef enum {StmtK, ExpK, DeclareK} NodeKind;
 
-/* ExpType is used for type checking */
-typedef enum {Void,Integer,Boolean} ExpType;
+typedef enum {IdDec, SizeDec, ParamDec, CompoundDec} DeclareKind;
+typedef enum {CompoundStmt, SelectionStmt, IterationStmt, ReturnStmt} StmtKind;
+typedef enum {OpExp, ConstExp, IdExp} ExpKind;
+
+typedef enum {Void, Integer, IntegerArray, VoidArray, IntegerFunc, VoidFunc} Type;
 
 #define MAXCHILDREN 3
 
 typedef struct treeNode
-   { struct treeNode * child[MAXCHILDREN];
-     struct treeNode * sibling;
-     int lineno;
-     NodeKind nodekind;
-     union { StmtKind stmt; ExpKind exp;} kind;
-     union { TokenType op;
-             int val;
-             char * name; } attr;
-     ExpType type; /* for type checking of exps */
-   } TreeNode;
+{
+	struct treeNode * child[MAXCHILDREN];
+	struct treeNode * sibling;
+	int lineno;
+	NodeKind nodekind;
+	
+	union
+	{
+		StmtKind stmt;
+		ExpKind exp;
+		DeclareKind declaration;
+	} kind;
+    
+	union
+	{
+		TokenType op;
+		int val;
+		char * name;
+	} attr;
+	
+	Type type;
+} TreeNode;
 
 /**************************************************/
 /***********   Flags for tracing       ************/

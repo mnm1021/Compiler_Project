@@ -212,7 +212,26 @@ void printTree(TreeNode * tree)
 						fprintf(listing, "Variable ");
 					}
 
-					fprintf(listing,"Declaration - ID : %s\n", tree->attr.name);
+					fprintf(listing,"Declaration - ID : %s, type : ", tree->attr.name);
+
+                    switch (tree->type)
+                    {
+                        case Integer:
+                            fprintf(listing, "Integer\n");
+                            break;
+
+                        case IntegerArray:
+                            fprintf(listing, "IntegerArray\n");
+                            break;
+
+                        case Void:
+                            fprintf(listing, "Void\n");
+                            break;
+
+                        default:
+                            fprintf(listing, "Error\n");
+                    }
+
 					break;
 
 				case SizeDec:
@@ -220,7 +239,25 @@ void printTree(TreeNode * tree)
 					break;
 
 				case ParamDec:
-					fprintf(listing,"Param : %s\n", tree->attr.name);
+					fprintf(listing,"Param : %s, type ", tree->attr.name);
+
+                    switch (tree->type)
+                    {
+                        case Integer:
+                            fprintf(listing, "Integer\n");
+                            break;
+
+                        case IntegerArray:
+                            fprintf(listing, "IntegerArray\n");
+                            break;
+
+                        case Void:
+                            fprintf(listing, "Void\n");
+                            break;
+
+                        default:
+                            fprintf(listing, "Error\n");
+                    }
 					break;
 
 				default:

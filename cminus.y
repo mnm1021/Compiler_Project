@@ -75,6 +75,7 @@ var_declaration		: type_specifier ID SEMI
 							$$ = newDeclareNode(IdDec);
 
 							$$->attr.name = copyString(savedName);
+                            $$->type = (Type)$1;
 							free(savedName);
 						}
 					| type_specifier ID LBRACE NUM RBRACE SEMI
@@ -93,6 +94,10 @@ var_declaration		: type_specifier ID SEMI
 							$$ = newDeclareNode(IdDec);
 
 							$$->attr.name = copyString(savedName);
+                            if ((Type)$1 == Integer)
+                            {
+                                $$->type = IntegerArray;
+                            }
 							free(savedName);
 
 							$$->child[0] = newDeclareNode(SizeDec);
@@ -102,11 +107,11 @@ var_declaration		: type_specifier ID SEMI
 
 type_specifier		: INT
 						{
-							$$ = (YYSTYPE)INT;
+							$$ = (YYSTYPE)Integer;
 						}
 					| VOID
 						{
-							$$ = (YYSTYPE)VOID;
+							$$ = (YYSTYPE)Void;
 						}
 					;
 
@@ -121,6 +126,7 @@ func_declaration	: type_specifier ID LPAREN params RPAREN compound_stmt
 							$$ = newDeclareNode(IdDec);
 
 							$$->attr.name = copyString(savedName);
+                            $$->type = (Type)$1;
 							free(savedName);
 
 							$$->child[0] = $4;
@@ -170,6 +176,7 @@ param				: type_specifier ID
 							StackNode *tokenNode = PopStack(&top);
 
 							$$->attr.name = copyString(tokenNode->token);
+                            $$->type = (Type)$1;
 
 							free(tokenNode);
 						}
@@ -180,6 +187,7 @@ param				: type_specifier ID
 							StackNode *tokenNode = PopStack(&top);
 
 							$$->attr.name = copyString(tokenNode->token);
+                            $$->type = IntegerArray;
 
 							free(tokenNode);
 						}
@@ -339,12 +347,11 @@ var					: ID
 						}
 					| ID LBRACE expression RBRACE
 						{
-
+							$$ = newExpNode(IdExp);
 							StackNode *tokenNode = PopStack(&top);
 							$$->attr.name = copyString(tokenNode->token);
 							free(tokenNode);
 
-							$$ = newExpNode(IdExp);
 							$$->child[0] = $3;
 						}
 					;
@@ -437,6 +444,7 @@ call				: ID LPAREN args RPAREN
 
 							StackNode *tokenNode = PopStack(&top);
 							$$->attr.name = copyString(tokenNode->token);
+                            $$->type = Func;
 							free(tokenNode);
 
 							$$->child[0] = $3;
@@ -449,6 +457,7 @@ args				: args_list
 						}
 					| /* empty */
 						{
+                            $$ = NULL;
 						}
 					;
 
