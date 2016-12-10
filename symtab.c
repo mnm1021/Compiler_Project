@@ -35,7 +35,8 @@ static int hash ( char * key )
 /* Procedure st_insert inserts line numbers and
  * memory locations into the symbol table
  */
-int st_insert( BucketList *hashTable, TreeNode *t, int is_function )
+int st_insert( BucketList *hashTable, TreeNode *t, int is_function,
+       int location, int is_global, int is_param )
 {
     int h = hash(t->attr.name);
     BucketList l =  hashTable[h];
@@ -53,6 +54,10 @@ int st_insert( BucketList *hashTable, TreeNode *t, int is_function )
         l->is_function = is_function;
         l->type = t->type;
         l->param = NULL;
+
+        l->is_param = is_param;
+        l->is_global = is_global;
+        l->location = location;
 
         l->next = hashTable[h];
         hashTable[h] = l;
@@ -127,7 +132,7 @@ static void printType(Type type)
 /**
  * find table that has the given order.
  */
-static struct SymbolTable *findNewTableInOrder(
+struct SymbolTable *findNewTableInOrder(
         struct SymbolTable *currentTable,
         int order)
 {

@@ -8,7 +8,7 @@ CC = gcc
 
 CFLAGS =
 
-OBJS = main.o util.o scan.o symtab.o analyze.o #parse.o code.o cgen.o
+OBJS = main.o util.o scan.o symtab.o analyze.o code.o cgen.o #parse.o
 
 tiny: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o tiny
@@ -31,11 +31,11 @@ symtab.o: symtab.c symtab.h
 analyze.o: analyze.c globals.h symtab.h analyze.h
 	$(CC) $(CFLAGS) -c analyze.c
 
-#code.o: code.c code.h globals.h
-#	$(CC) $(CFLAGS) -c code.c
+code.o: code.c code.h globals.h
+	$(CC) $(CFLAGS) -c code.c
 
-#cgen.o: cgen.c globals.h symtab.h code.h cgen.h
-#	$(CC) $(CFLAGS) -c cgen.c
+cgen.o: cgen.c globals.h symtab.h code.h cgen.h
+	$(CC) $(CFLAGS) -c cgen.c
 
 tm: tm.c
 	$(CC) $(CFLAGS) tm.c -o tm
@@ -53,17 +53,17 @@ lex.yy.o: cminus.l scan.h util.h globals.h
 
 
 #by yacc, flex
-OBJS_YACC = y.tab.o main.o util.o lex.yy.o symtab.o analyze.o
+OBJS_YACC = y.tab.o main.o util.o lex.yy.o symtab.o analyze.o code.o cgen.o
 
-cminus_yacc: $(OBJS_YACC)
-	$(CC) $(CFLAGS) $(OBJS_YACC) -o cminus_yacc -lfl
+cminus: $(OBJS_YACC)
+	$(CC) $(CFLAGS) $(OBJS_YACC) -o cminus -lfl
 
-y.tab.o: cminus.y scan.h util.h globals.h parse.h symtab.h analyze.h
+y.tab.o: cminus.y scan.h util.h globals.h parse.h symtab.h analyze.h code.h cgen.h
 	yacc -d --debug cminus.y
 	$(CC) $(CFLAGS) -c y.tab.c -lfl
 
 
-all: tiny tm cminus_flex cminus_yacc
+all: tiny tm cminus_flex cminus
 
 
 clean:
@@ -73,4 +73,4 @@ clean:
 	-rm lex.yy.*
 	-rm y.tab.*
 	-rm cminus_flex
-	-rm cminus_yacc
+	-rm cminus

@@ -32,6 +32,10 @@ typedef struct BucketListRec
     Type type;
     struct BucketListRec * next;
     struct BucketListRec * param;
+
+    int is_param;
+    int is_global;
+    int location; /* address that this symbol is stored in */
 } *BucketList;
 
 /**
@@ -72,7 +76,8 @@ struct SymbolTable *globalTable;
 /* Procedure st_insert inserts line numbers and
  * memory locations into the symbol table
  */
-int st_insert( BucketList *hashTable, TreeNode *t, int is_function );
+int st_insert( BucketList *hashTable, TreeNode *t, int is_function,
+        int location, int is_global, int is_param );
 
 /**
  * st_lookup calls table_lookup recursively finds the variable from bottom to up.
@@ -88,5 +93,12 @@ BucketList table_lookup ( BucketList *hashTable, char * name );
  * to the listing file
  */
 void printSymTab(FILE * listing);
+
+/**
+ * find table that has the given order.
+ */
+struct SymbolTable *findNewTableInOrder(
+        struct SymbolTable *currentTable,
+        int order);
 
 #endif

@@ -10,17 +10,20 @@
 #include "symtab.h"
 #include "analyze.h"
 
-/* counter for variable memory locations */
-static int location = 0;
+#define MAX_SCOPE 1000
 
 /* represents current symbol table. */
-struct SymbolTable *currentTable;
+static struct SymbolTable *currentTable;
 
 /* variable for not duplicating child. */
-int isNewFunctionDeclared = 0;
+static int isNewFunctionDeclared = 0;
 
 /* set traversing order. */
-int order = 0;
+static int order = 0;
+
+/* set variable's location. */
+static int location[MAX_SCOPE];
+static int currentScope = -1;
 
 /******************
  * error handlers *
@@ -68,6 +71,33 @@ static void invalidFunctionError(TreeNode * t)
     Error = TRUE;
 }
 
+/**
+ * push one scope.
+ */
+static void pushLocation()
+{
+    currentScope += 1;
+    location[currentScope] = 0;
+}
+
+/**
+ * pop one scope.
+ */
+static void popLocation()
+{
+    currentScope -= 1;
+}
+
+/**
+ * returns the location of variable.
+ */
+static int getLocation(int size)
+{
+    int ret = location[currentScope];
+    location[currentScope] += size;
+    return ret;
+}
+
 /* Procedure traverse is a generic recursive 
  * syntax tree traversal routine:
  * it applies preProc in preorder and postProc 
@@ -102,6 +132,11 @@ static void backtrackProc(TreeNode * t)
     if (t->nodekind == StmtK && t->kind.stmt == CompoundStmt)
     {
         currentTable = currentTable->parent;
+    }
+    else if (t->nodekind == DeclareK && t->child[1] != NULL)
+    {
+        /* function declaration ended : pop location stack */
+        popLocation();
     }
 }
 
@@ -193,7 +228,12 @@ static void insertNode( TreeNode * t)
             {
                 isFunction = 1;
 
-                if (st_insert( currentTable->hashTable, t, isFunction ) == -1)
+                if (st_insert( currentTable->hashTable,
+                               t,
+                               isFunction,
+                               getLocation(1) /* function size is 1 */,
+                               (currentTable == globalTable) ? 1 : 0,
+                               0 /* not parameter */ ) == -1)
                 {
                     /* error : duplicated insertion */
                     duplicateError(t, t->attr.name);
@@ -233,6 +273,9 @@ static void insertNode( TreeNode * t)
                 currentTable = newTable;
 
                 isNewFunctionDeclared = 1;
+
+                /* push location stack. */
+                pushLocation();
             }
             else
             {
@@ -242,7 +285,18 @@ static void insertNode( TreeNode * t)
                     voidVariableError(t);
                 }
 
-                if (st_insert( currentTable->hashTable, t, isFunction ) == -1)
+                int size = 1;
+                if (t->type == IntegerArray)
+                {
+                    size = t->child[0]->attr.val;
+                }
+
+                if (st_insert( currentTable->hashTable,
+                               t,
+                               isFunction,
+                               getLocation(size),
+                               (currentTable == globalTable) ? 1 : 0,
+                               0 /* not parameter */ ) == -1)
                 {
                     /* error : duplicated insertion */
                     duplicateError(t, t->attr.name);
@@ -251,7 +305,12 @@ static void insertNode( TreeNode * t)
         }
         else if (t->kind.declaration == ParamDec)
         {
-            if (st_insert( currentTable->hashTable, t, 0 ) == -1)
+            if (st_insert( currentTable->hashTable,
+                           t,
+                           0 /* parameter is not a function */,
+                           getLocation(1) /* handle array as a reference */,
+                           (currentTable == globalTable) ? 1 : 0,
+                           1 /* parameter */ ) == -1)
             {
                 /* error : duplicated insertion */
                 duplicateError(t, t->attr.name);
@@ -404,7 +463,7 @@ void buildSymtab(TreeNode * syntaxTree)
     inputNode->lineno = 0;
     inputNode->type = Integer;
 
-    st_insert(globalTable->hashTable, inputNode, 1);
+    st_insert(globalTable->hashTable, inputNode, 1, -1/* TODO */, 1, 0);
 
     TreeNode *outputNode = (TreeNode *)malloc(sizeof(TreeNode));
 
@@ -412,7 +471,7 @@ void buildSymtab(TreeNode * syntaxTree)
     outputNode->lineno = 0;
     outputNode->type = Void;
 
-    st_insert(globalTable->hashTable, outputNode, 1);
+    st_insert(globalTable->hashTable, outputNode, 1, -1/* TODO */, 1, 0);
 
     /* add param to output. */
     BucketList outputHash = st_lookup(globalTable, "output");

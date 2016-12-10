@@ -135,9 +135,6 @@ func_declaration	: type_specifier ID LPAREN params RPAREN compound_stmt
 
 							$$->child[0] = $4;
 							$$->child[1] = $6;
-
-							if ($$->child[0] == NULL)
-								$$->child[0] = newEmptyNode();
 						}
 					;
 
@@ -211,7 +208,11 @@ compound_stmt		: LCURLY local_declarations statement_list RCURLY
 						}
 					;
 
-local_declarations	: local_declarations var_declaration
+local_declarations	: /* empty */
+						{
+							$$ = NULL;
+						}
+                    | local_declarations var_declaration
 						{
 							YYSTYPE node = $1;
 
@@ -226,10 +227,6 @@ local_declarations	: local_declarations var_declaration
 
 								$$ = $1;
 							}
-						}
-					| /* empty */
-						{
-							$$ = NULL;
 						}
 					;
 

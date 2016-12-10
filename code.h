@@ -23,6 +23,15 @@
  */
 #define gp 5
 
+/* stack frame pointer */
+#define fp 4
+
+/* constant register */
+#define constant 3
+
+/* zero register */
+#define zero 2
+
 /* accumulator */
 #define  ac 0
 
