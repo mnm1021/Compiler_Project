@@ -463,7 +463,7 @@ void buildSymtab(TreeNode * syntaxTree)
     inputNode->lineno = 0;
     inputNode->type = Integer;
 
-    st_insert(globalTable->hashTable, inputNode, 1, -1/* TODO */, 1, 0);
+    st_insert(globalTable->hashTable, inputNode, 1, -1, 1, 0);
 
     TreeNode *outputNode = (TreeNode *)malloc(sizeof(TreeNode));
 
@@ -471,7 +471,7 @@ void buildSymtab(TreeNode * syntaxTree)
     outputNode->lineno = 0;
     outputNode->type = Void;
 
-    st_insert(globalTable->hashTable, outputNode, 1, -1/* TODO */, 1, 0);
+    st_insert(globalTable->hashTable, outputNode, 1, -1, 1, 0);
 
     /* add param to output. */
     BucketList outputHash = st_lookup(globalTable, "output");

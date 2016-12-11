@@ -32,11 +32,6 @@ static struct SymbolTable *currentTable;
 static int order = 0;
 
 /*
- * current function name.
- */
-static char *currentFunction = "__GLOBAL__";
-
-/*
  * location of main function.
  */
 static int mainFunctionLoc;
@@ -220,7 +215,7 @@ static void genStmt( TreeNode * tree)
             /* generate code for statements in 'else'.
                if no 'else', secondBlock would point to the next statement. */
             secondBlock = emitSkip(0);
-            if (tree->child[2] != NULL)
+            if (tree->child[2] != NULL && tree->child[2]->nodekind != EmptyK)
             {
                 secondLoc = emitSkip(1);
                 secondBlock = emitSkip(0);
@@ -245,14 +240,14 @@ static void genStmt( TreeNode * tree)
         /* left(child[0]) : expression */
         /* right(child[1]) : statement */
         case IterationStmt:
+            /* save the start of loop block. */
+            firstBlock = emitSkip(0);
+
             /* generate code for expresion. */
             cGen(tree->child[0]);
 
             /* save current location. */
             firstLoc = emitSkip(1);
-
-            /* save the start of loop block. */
-            firstBlock = emitSkip(0);
 
             /* generate code for statements in 'while'. */
             cGen(tree->child[1]);
@@ -290,8 +285,10 @@ static void genExp( TreeNode * tree)
 {
     BucketList var;
     int location;
-    TreeNode *param;
+    TreeNode *param, *left;
     int offset;
+
+    int firstLoc, secondLoc;
 
     switch(tree->kind.exp)
     {
@@ -301,74 +298,126 @@ static void genExp( TreeNode * tree)
             /* get expression value from right. */
             cGen(tree->child[1]);
 
-            /* if not assign, store right value to ac1 and get value of left. */
+            /* store right expression value on stack. */
+            emitRM("ST", ac, -1, mp, "mem[mp - 1] = right expression");
+
+            /* push mp 1. */
+            emitRO("SUB", mp, mp, constant, "mp = mp - 1");
+
+            /* if not assign, get left value and store to ac. */
             if (tree->attr.op != ASSIGN)
             {
-                /* store right expression value to ac1. */
-                emitRO("ADD", ac1, ac, zero, "ac1 = ac");
-
                 /* get expression value from left. */
                 cGen(tree->child[0]);
+
+                /* pop mp 1. */
+                emitRO("ADD", mp, mp, constant, "mp = mp + 1");
+
+                /* load right expression value to ac1. */
+                emitRM("LD", ac1, -1, mp, "ac1 = mem[mp - 1]");
             }
 
             /* handle according to the values. */
             switch(tree->attr.op)
             {
                 case ASSIGN:
-                    var = st_lookup(currentTable, tree->child[0]->attr.name);
+                    left = tree->child[0];
+                    var = st_lookup(currentTable, left->attr.name);
                     location = 0 - var->location;
 
-                    /* array : variable offset + size.
-                       child[0] is expression. */
+                    /* array : handle reference. */
                     if (var->type == IntegerArray)
                     {
-                        /* gererate code for expression :
-                           ac has the size of array. */
-                        cGen(tree->child[0]->child[0]);
-
-                        /* handle array in parameter : reference. */
-                        if (var->is_param == 1)
+                        /* if pointing array itself, resolve reference. */
+                        if (left->child[0] == NULL)
                         {
-                            /* TODO */
+                            /* pop mp 1. */
+                            emitRO("ADD", mp, mp, constant, "mp = mp + 1");
+
+                            /* load right expression value to ac1. */
+                            emitRM("LD", ac1, -1, mp, "ac1 = mem[mp - 1]");
+
+                            /* C-Minus do not support pointer expression,
+                               so this would be left in blank.
+                               just resolved mp to original state. */
                         }
-                        /* handle array : add size from array. */
+                        /* if pointing array's element, calculate offset. */
                         else
                         {
-                            /* global variable : subtract from global pointer. */
-                            if (var->is_global == 1)
+                            /* generate expression code for offset.
+                               register 'ac' has the offset. */
+                            cGen(left->child[0]);
+
+                            /* if parameter. resolve reference. */
+                            if (var->is_param == 1)
                             {
-                                emitRO("SUB", ac1, gp, ac,
-                                        "ac1 = gp - arraySize");
-                                emitRM("ST", ac, location,ac1,
-                                        "memory[ac1 - location] = ac");
+                                /* register 'ac' has the index. */
+
+                                emitRM("LD", ac1, location, fp,
+                                        "load reference to ac1.");
+                                emitRO("SUB", ac1, ac1, ac, "ac1 = ac1 - ac");
+
+                                /* store ac1's value to ac. */
+                                emitRO("ADD", ac, ac1, zero, "ac = ac1");
+
+                                /* pop mp 1. */
+                                emitRO("ADD", mp, mp, constant, "mp = mp + 1");
+
+                                /* load right expression value to ac1. */
+                                emitRM("LD", ac1, -1, mp, "ac1 = mem[mp - 1]");
+
+                                /* store ac1's value to stack. */
+                                emitRM("ST", ac1, 0, ac, "memory[ac] = ac1");
                             }
-                            /* local variable : subtract from frame pointer. */
+                            /* else, calculate offset. */
                             else
                             {
-                                emitRO("SUB", ac1, fp, ac,
-                                        "ac1 = fp - arraySize");
-                                emitRM("ST", ac, location,ac1,
-                                        "memory[ac1 - location] = ac");
+                                /* if global array, calculate from gp. */
+                                if (var->is_global == 1)
+                                {
+                                    emitRO("SUB", ac, gp, ac, "ac = gp - offset");
+                                }
+                                /* else, calculate from fp. */
+                                else
+                                {
+                                    emitRO("SUB", ac, fp, ac, "ac = fp - offset");
+                                }
+
+                                /* pop mp 1. */
+                                emitRO("ADD", mp, mp, constant, "mp = mp + 1");
+
+                                /* load right expression value to ac1. */
+                                emitRM("LD", ac1, -1, mp, "ac1 = mem[mp - 1]");
+
+                                /* store right expression value to stack. */
+                                emitRM("ST", ac1, location, ac,
+                                        "memory[ac - location] = ac1");
                             }
                         }
                     }
-                    /* normal variable. */
+                    /* plain variable :
+                       get reference by frame/global pointer. */
                     else
                     {
+                        /* pop mp 1. */
+                        emitRO("ADD", mp, mp, constant, "mp = mp + 1");
+
+                        /* load right expression value to ac1. */
+                        emitRM("LD", ac1, -1, mp, "ac1 = mem[mp - 1]");
+                        
                         /* global variable : subtract from global pointer. */
                         if (var->is_global == 1)
                         {
-                            emitRM("ST", ac, location, gp,
-                                    "memory[gp - location] = ac");
+                            emitRM("ST", ac1, location, gp,
+                                    "memory[gp - location] = ac1");
                         }
                         /* local variable : subtract from frame pointer. */
                         else
                         {
-                            emitRM("ST", ac, location, fp,
-                                    "memory[fp - location] = ac");
+                            emitRM("ST", ac1, location, fp,
+                                    "memory[fp - location] = ac1");
                         }
                     }
-
                     break;
 
                 case PLUS:
@@ -392,43 +441,43 @@ static void genExp( TreeNode * tree)
                     break;
 
                 case NE:
-                    emitRO("SUB",ac,ac1,ac,"op !=");
-                    emitRM("JNE",ac,2,pc,"br if true");
-                    emitRM("LDC",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDC",ac,1,ac,"true case");
+                    emitRO("SUB", ac, ac, ac1, "op !=");
+                    emitRM("JNE", ac, 2, pc, "jump if true");
+                    emitRO("ADD", ac, constant, zero, "a = 1 : not true");
+                    emitRM("JEQ", zero, 1, pc, "jump to next instruction");
+                    emitRO("ADD", ac, zero, zero, "a = 0 : true");
                     break;
 
                 case LT:
-                    emitRO("SUB",ac,ac1,ac,"op <");
-                    emitRM("JLT",ac,2,pc,"br if true");
-                    emitRM("LDC",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDC",ac,1,ac,"true case");
+                    emitRO("SUB", ac, ac, ac1, "op <");
+                    emitRM("JLT", ac, 2, pc, "jump if true");
+                    emitRO("ADD", ac, constant, zero, "a = 1 : not true");
+                    emitRM("JEQ", zero, 1, pc, "jump to next instruction");
+                    emitRO("ADD", ac, zero, zero, "a = 0 : true");
                     break;
 
                 case GT:
-                    emitRO("SUB",ac,ac1,ac,"op >");
-                    emitRM("JGT",ac,2,pc,"br if true");
-                    emitRM("LDC",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDC",ac,1,ac,"true case");
+                    emitRO("SUB", ac, ac, ac1, "op >");
+                    emitRM("JGT", ac, 2, pc, "jump if true");
+                    emitRO("ADD", ac, constant, zero, "a = 1 : not true");
+                    emitRM("JEQ", zero, 1, pc, "jump to next instruction");
+                    emitRO("ADD", ac, zero, zero, "a = 0 : true");
                     break;
 
                 case LE:
-                    emitRO("SUB",ac,ac1,ac,"op <=");
-                    emitRM("JLE",ac,2,pc,"br if true");
-                    emitRM("LDC",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDC",ac,1,ac,"true case");
+                    emitRO("SUB", ac, ac, ac1, "op <=");
+                    emitRM("JLE", ac, 2, pc, "jump if true");
+                    emitRO("ADD", ac, constant, zero, "a = 1 : not true");
+                    emitRM("JEQ", zero, 1, pc, "jump to next instruction");
+                    emitRO("ADD", ac, zero, zero, "a = 0 : true");
                     break;
 
                 case GE:
-                    emitRO("SUB",ac,ac1,ac,"op >=");
-                    emitRM("JGE",ac,2,pc,"br if true");
-                    emitRM("LDC",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDC",ac,1,ac,"true case");
+                    emitRO("SUB", ac, ac, ac1, "op >=");
+                    emitRM("JGE", ac, 2, pc, "jump if true");
+                    emitRO("ADD", ac, constant, zero, "a = 1 : not true");
+                    emitRM("JEQ", zero, 1, pc, "jump to next instruction");
+                    emitRO("ADD", ac, zero, zero, "a = 0 : true");
                     break;
             }
 
@@ -508,21 +557,49 @@ static void genExp( TreeNode * tree)
                 /* handle array in parameter : reference. */
                 if (var->is_param == 1)
                 {
-                    /* TODO */
+                    /* if called array itself, return reference. */
+                    if (tree->child[0] == NULL)
+                    {
+                        emitRM("LD", ac, location, fp, "load reference to ac.");
+                    }
+                    /* else if called array's value, return reference's value. */
+                    else
+                    {
+                        /* register 'ac' has the index. */
+
+                        emitRM("LD", ac1, location, fp, "load reference to ac1.");
+                        emitRO("SUB", ac1, ac1, ac, "ac1 = ac1 - ac");
+                        emitRM("LD", ac, 0, ac1, "ac = memory[ac1]");
+                    }
                 }
                 /* handle array : add size from array. */
                 else
                 {
-                    /* global variable : subtract from global pointer. */
-                    if (var->is_global == 1)
+                    /* if called array itself, return reference. */
+                    if (tree->child[0] == NULL)
                     {
-                        emitRO("SUB", ac1, gp, ac, "ac1 = gp - arraySize");
+                        emitRM_Abs("LDA", ac, location, "load -location to ac");
+                        /* global variable : gp - location */
+                        if (var->is_global == 1)
+                        {
+                            emitRO("ADD", ac, gp, ac, "ac = gp - location");
+                        }
+                        /* local variable : fp - location */
+                        else
+                        {
+                            emitRO("ADD", ac, fp, ac, "ac = fp - location");
+                        }
+                    }
+                    /* global variable : subtract from global pointer. */
+                    else if (var->is_global == 1)
+                    {
+                        emitRO("SUB", ac1, gp, ac, "ac1 = gp - offset");
                         emitRM("LD", ac, location,ac1,"ac = memory[ac1 - location]");
                     }
                     /* local variable : subtract from frame pointer. */
                     else
                     {
-                        emitRO("SUB", ac1, fp, ac, "ac1 = fp - arraySize");
+                        emitRO("SUB", ac1, fp, ac, "ac1 = fp - offset");
                         emitRM("LD", ac, location,ac1,"ac = memory[ac1 - location]");
                     }
                 }
